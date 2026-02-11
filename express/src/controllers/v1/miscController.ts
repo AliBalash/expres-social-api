@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import HttpError from '../../errors/HttpError';
+import bundleClient from '../../services/bundleSocialClient';
 
 const SOCIAL_ACCOUNT_TYPES = [
   'TIKTOK',
@@ -77,6 +79,14 @@ const loadTimeZones = (): string[] => {
 
 const timeZones = loadTimeZones();
 
+const coerceString = (value: unknown): string | undefined => {
+  if (Array.isArray(value)) {
+    return coerceString(value[0]);
+  }
+
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+};
+
 export const getTimeZones = async (_req: Request, res: Response) => {
   res.json({
     count: timeZones.length,
@@ -98,4 +108,26 @@ export const getServerInfo = async (_req: Request, res: Response) => {
     uptimeSeconds: process.uptime(),
     pid: process.pid,
   });
+};
+
+export const instagramBusinessDiscovery = async (
+  req: Request,
+  res: Response,
+) => {
+  const teamId = coerceString(req.query.teamId);
+  const username = coerceString(req.query.username);
+
+  if (!teamId) {
+    throw new HttpError(400, 'teamId is required');
+  }
+  if (!username) {
+    throw new HttpError(400, 'username is required');
+  }
+
+  const result = await bundleClient.instagram.miscInstagramBusinessDiscovery({
+    teamId,
+    username,
+  });
+
+  res.json(result);
 };

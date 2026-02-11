@@ -1,3 +1,4 @@
+import path from 'path';
 import { Blob } from 'buffer';
 import { Request, Response } from 'express';
 import HttpError from '../../errors/HttpError';
@@ -98,8 +99,33 @@ export const createUpload = async (req: Request, res: Response) => {
     throw new HttpError(400, 'file is required');
   }
 
+  const resolveMimeType = (file: Express.Multer.File): AllowedMimeType => {
+    const reported = file.mimetype?.trim().toLowerCase();
+    if (reported && reported !== 'application/octet-stream') {
+      return normalizeMimeType(reported);
+    }
+
+    const ext = path.extname(file.originalname ?? '').toLowerCase();
+    if (ext === '.jpg' || ext === '.jpeg') {
+      return 'image/jpeg';
+    }
+    if (ext === '.png') {
+      return 'image/png';
+    }
+    if (ext === '.mp4') {
+      return 'video/mp4';
+    }
+    if (ext === '.pdf') {
+      return 'application/pdf';
+    }
+
+    return normalizeMimeType(reported);
+  };
+
+  const mimeType = resolveMimeType(req.file);
+
   const blob = new Blob([req.file.buffer], {
-    type: req.file.mimetype,
+    type: mimeType,
   });
 
   const upload = await bundleClient.upload.uploadCreate({
@@ -149,4 +175,23 @@ export const finalizeLargeUpload = async (req: Request, res: Response) => {
   });
 
   res.json(upload);
+};
+
+export const deleteUploads = async (req: Request, res: Response) => {
+  const result = await bundleClient.upload.uploadDeleteMany({
+    requestBody: req.body,
+  });
+
+  res.json(result);
+};
+
+export const deleteUpload = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  if (!id) {
+    throw new HttpError(400, 'id is required');
+  }
+
+  const result = await bundleClient.upload.uploadDelete({ id });
+  res.json(result);
 };

@@ -25,6 +25,8 @@ export interface InstagramPostPayload {
   text: string;
   type?: InstagramMediaType;
   uploadIds: string[];
+  thumbnail?: string;
+  thumbnailOffset?: number;
   shareToFeed?: boolean;
   collaborators?: string[];
   tagged?: InstagramTag[];

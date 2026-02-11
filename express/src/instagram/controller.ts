@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import HttpError from '../errors/HttpError';
+import env from '../config/env';
 import instagramService from './service';
+import path from 'path';
 import {
   InstagramMediaType,
   InstagramPostPayload,
@@ -22,7 +24,9 @@ const normalizeBasePostPayload = (
   defaultType: InstagramMediaType,
   allowCustomType = false,
 ): InstagramPostPayload => {
-  if (!body.teamId) {
+  const resolvedTeamId = body.teamId ?? env.defaultTeamId;
+
+  if (!resolvedTeamId) {
     throw new HttpError(400, 'teamId is required');
   }
 
@@ -57,7 +61,7 @@ const normalizeBasePostPayload = (
   }
 
   return {
-    teamId: body.teamId,
+    teamId: resolvedTeamId,
     title: body.title,
     postDate: body.postDate,
     status: body.status,
@@ -102,12 +106,14 @@ export const createPortalLink = async (req: Request, res: Response) => {
   const { teamId, redirectUrl, userName, language, logoUrl, userLogoUrl } =
     req.body;
 
-  if (!teamId) {
+  const resolvedTeamId = teamId ?? env.defaultTeamId;
+
+  if (!resolvedTeamId) {
     throw new HttpError(400, 'teamId is required');
   }
 
   const portalLink = await instagramService.createPortalLink({
-    teamId,
+    teamId: resolvedTeamId,
     redirectUrl,
     userName,
     language: parsePortalLanguage(language),
@@ -121,18 +127,25 @@ export const createPortalLink = async (req: Request, res: Response) => {
 export const setChannel = async (req: Request, res: Response) => {
   const { teamId, channelId } = req.body;
 
-  if (!teamId || !channelId) {
+  const resolvedTeamId = teamId ?? env.defaultTeamId;
+
+  if (!resolvedTeamId || !channelId) {
     throw new HttpError(400, 'teamId and channelId are required');
   }
 
-  const response = await instagramService.setInstagramChannel(teamId, channelId);
+  const response = await instagramService.setInstagramChannel(
+    resolvedTeamId,
+    channelId,
+  );
   res.json(response);
 };
 
 export const uploadMedia = async (req: Request, res: Response) => {
   const { teamId } = req.body;
 
-  if (!teamId) {
+  const resolvedTeamId = teamId ?? env.defaultTeamId;
+
+  if (!resolvedTeamId) {
     throw new HttpError(400, 'teamId is required');
   }
 
@@ -140,10 +153,30 @@ export const uploadMedia = async (req: Request, res: Response) => {
     throw new HttpError(400, 'file is required');
   }
 
+  const resolveMimeType = (file: Express.Multer.File): string => {
+    const reported = file.mimetype?.trim().toLowerCase();
+    if (reported && reported !== 'application/octet-stream') {
+      return reported;
+    }
+
+    const ext = path.extname(file.originalname ?? '').toLowerCase();
+    if (ext === '.jpg' || ext === '.jpeg') {
+      return 'image/jpeg';
+    }
+    if (ext === '.png') {
+      return 'image/png';
+    }
+    if (ext === '.mp4') {
+      return 'video/mp4';
+    }
+
+    return reported || 'application/octet-stream';
+  };
+
   const upload = await instagramService.uploadMediaSimple({
-    teamId,
+    teamId: resolvedTeamId,
     file: req.file.buffer,
-    mimeType: req.file.mimetype,
+    mimeType: resolveMimeType(req.file),
   });
 
   res.status(201).json(upload);

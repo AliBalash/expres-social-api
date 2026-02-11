@@ -12,6 +12,15 @@ app.get('/', (_req, res) => {
   res.send('bundle.social Instagram backend is running');
 });
 
+// Convenience endpoint for the hosted portal redirectUrl (see docs).
+// It just echoes the query string so you can confirm the OAuth flow completed.
+app.get('/instagram/callback', (req, res) => {
+  res.json({
+    ok: true,
+    query: req.query,
+  });
+});
+
 app.post(
   '/api/webhook',
   express.raw({ type: 'application/json' }),

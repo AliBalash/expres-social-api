@@ -372,3 +372,67 @@ export const deleteSocialAccount = async (req: Request, res: Response) => {
 
   res.json(deleted);
 };
+
+// The endpoints below match the bundle.social API surface area more closely.
+// They are kept alongside the REST-y `/:id` wrappers for compatibility.
+
+export const disconnectSocialAccount = async (req: Request, res: Response) => {
+  const { teamId, type } = req.body ?? {};
+
+  const deleted =
+    await bundleClient.socialAccount.socialAccountDisconnect({
+      requestBody: {
+        teamId: parseTeamId(teamId),
+        type: normalizeType(type),
+      },
+    });
+
+  res.json(deleted);
+};
+
+export const setSocialAccountChannel = async (
+  req: Request,
+  res: Response,
+) => {
+  const { teamId, type, channelId } = req.body ?? {};
+
+  if (typeof channelId !== 'string' || channelId.trim().length === 0) {
+    throw new HttpError(400, 'channelId is required');
+  }
+
+  const updated =
+    await bundleClient.socialAccount.socialAccountSetChannel({
+      requestBody: {
+        teamId: parseTeamId(teamId),
+        type: requireChannelSelectableType(normalizeType(type)),
+        channelId: channelId.trim(),
+      },
+    });
+
+  res.json(updated);
+};
+
+export const refreshSocialAccountChannels = async (
+  req: Request,
+  res: Response,
+) => {
+  const { teamId, type } = req.body ?? {};
+
+  const refreshed =
+    await bundleClient.socialAccount.socialAccountRefreshChannels({
+      requestBody: {
+        teamId: parseTeamId(teamId),
+        type: requireRefreshableType(normalizeType(type)),
+      },
+    });
+
+  res.json(refreshed);
+};
+
+export const copySocialAccount = async (req: Request, res: Response) => {
+  const copied = await bundleClient.socialAccount.socialAccountCopy({
+    requestBody: req.body,
+  });
+
+  res.status(201).json(copied);
+};
