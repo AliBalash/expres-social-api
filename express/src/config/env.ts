@@ -12,6 +12,15 @@ dotenv.config();
 
 export type TeamTier = 'FREE' | 'PRO' | 'BUSINESS';
 
+const parseString = (value: string | undefined): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
 const parseBoolean = (value: string | undefined, fallback = false) => {
   if (typeof value !== 'string') {
     return fallback;
@@ -72,6 +81,13 @@ const env = {
   port: Number(process.env.PORT ?? 3000),
   apiKey: process.env.BUNDLESOCIAL_API_KEY ?? '',
   webhookSecret: process.env.BUNDLESOCIAL_WEBHOOK_SECRET ?? '',
+  defaultTeamId: parseString(process.env.BUNDLESOCIAL_DEFAULT_TEAM_ID),
+  defaultInstagramSocialAccountId: parseString(
+    process.env.BUNDLESOCIAL_DEFAULT_INSTAGRAM_SOCIAL_ACCOUNT_ID,
+  ),
+  defaultInstagramUsername: parseString(
+    process.env.BUNDLESOCIAL_DEFAULT_INSTAGRAM_USERNAME,
+  ),
   redirectUrl:
     process.env.BUNDLESOCIAL_REDIRECT_URL ??
     'http://localhost:3000/instagram/callback',
