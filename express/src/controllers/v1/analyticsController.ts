@@ -51,6 +51,24 @@ const coerceString = (value: unknown): string | undefined => {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 };
 
+const parseCsv = (value: unknown): string[] | undefined => {
+  const source = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : undefined;
+
+  if (!source) {
+    return undefined;
+  }
+
+  const normalized = source
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean);
+
+  return normalized.length ? normalized : undefined;
+};
+
 const aggregateEntries = (
   items: Array<{
     impressions: number;
@@ -141,6 +159,68 @@ export const getTeamAnalytics = async (req: Request, res: Response) => {
   });
 };
 
+export const getSocialAccountAnalyticsDirect = async (
+  req: Request,
+  res: Response,
+) => {
+  const teamId = coerceString(req.query.teamId);
+  const platformType = ensureAnalyticsPlatform(req.query.platformType);
+
+  if (!teamId) {
+    throw new HttpError(400, 'teamId query parameter is required');
+  }
+
+  const analytics =
+    await bundleClient.analytics.analyticsGetSocialAccountAnalytics({
+      teamId,
+      platformType,
+    });
+
+  res.json(analytics);
+};
+
+export const getSocialAccountAnalyticsRawDirect = async (
+  req: Request,
+  res: Response,
+) => {
+  const teamId = coerceString(req.query.teamId);
+  const platformType = ensureAnalyticsPlatform(req.query.platformType);
+
+  if (!teamId) {
+    throw new HttpError(400, 'teamId query parameter is required');
+  }
+
+  const analytics =
+    await bundleClient.analytics.analyticsGetSocialAccountAnalyticsRaw({
+      teamId,
+      platformType,
+    });
+
+  res.json(analytics);
+};
+
+export const forceSocialAccountAnalyticsRefreshDirect = async (
+  req: Request,
+  res: Response,
+) => {
+  const { teamId } = req.body ?? {};
+  const platformType = ensureAnalyticsPlatform(req.body?.platformType);
+
+  if (typeof teamId !== 'string' || teamId.trim().length === 0) {
+    throw new HttpError(400, 'teamId is required');
+  }
+
+  const result =
+    await bundleClient.analytics.analyticsForceSocialAccountAnalytics({
+      requestBody: {
+        teamId: teamId.trim(),
+        platformType,
+      },
+    });
+
+  res.json(result);
+};
+
 export const getSocialAccountAnalytics = async (
   req: Request,
   res: Response,
@@ -178,6 +258,69 @@ export const getSocialAccountAnalytics = async (
 
 const detectPostPlatforms = (postData: Record<string, unknown>) => {
   return ANALYTICS_PLATFORMS.filter((platform) => Boolean(postData[platform]));
+};
+
+export const getPostAnalyticsDirect = async (req: Request, res: Response) => {
+  const postId = coerceString(req.query.postId);
+  const platformType = ensureAnalyticsPlatform(req.query.platformType);
+
+  if (!postId) {
+    throw new HttpError(400, 'postId query parameter is required');
+  }
+
+  const analytics = await bundleClient.analytics.analyticsGetPostAnalytics({
+    postId,
+    platformType,
+  });
+
+  res.json(analytics);
+};
+
+export const getPostAnalyticsRawDirect = async (
+  req: Request,
+  res: Response,
+) => {
+  const postId = coerceString(req.query.postId);
+  const platformType = ensureAnalyticsPlatform(req.query.platformType);
+
+  if (!postId) {
+    throw new HttpError(400, 'postId query parameter is required');
+  }
+
+  const analytics =
+    await bundleClient.analytics.analyticsGetPostAnalyticsRaw({
+      postId,
+      platformType,
+    });
+
+  res.json(analytics);
+};
+
+export const getBulkPostAnalyticsDirect = async (
+  req: Request,
+  res: Response,
+) => {
+  const postIds = parseCsv(req.query.postIds);
+  const platformType = ensureAnalyticsPlatform(req.query.platformType);
+
+  if (!postIds) {
+    throw new HttpError(400, 'postIds query parameter is required');
+  }
+
+  const page =
+    typeof req.query.page === 'string' ? Number(req.query.page) : undefined;
+  const limit =
+    typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
+
+  const analytics =
+    await bundleClient.analytics.analyticsGetBulkPostAnalytics({
+      postIds,
+      platformType,
+      page: Number.isFinite(page) ? page : undefined,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+
+  res.json(analytics);
 };
 
 export const getPostAnalytics = async (req: Request, res: Response) => {
@@ -240,6 +383,27 @@ export const forceTeamAnalyticsRefresh = async (
         platformType,
       },
     });
+
+  res.json(result);
+};
+
+export const forcePostAnalyticsRefreshDirect = async (
+  req: Request,
+  res: Response,
+) => {
+  const { postId } = req.body ?? {};
+  const platformType = ensureAnalyticsPlatform(req.body?.platformType);
+
+  if (typeof postId !== 'string' || postId.trim().length === 0) {
+    throw new HttpError(400, 'postId is required');
+  }
+
+  const result = await bundleClient.analytics.analyticsForcePostAnalytics({
+    requestBody: {
+      postId: postId.trim(),
+      platformType,
+    },
+  });
 
   res.json(result);
 };
