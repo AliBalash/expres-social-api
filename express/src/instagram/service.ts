@@ -72,6 +72,27 @@ export class InstagramService {
   createInstagramPost(payload: InstagramPostPayload) {
     const offsetMs = env.postDefaults.scheduleOffsetMinutes * 60 * 1000;
 
+    const instagramData: Record<string, unknown> = {
+      type: payload.type ?? env.postDefaults.type,
+      text: payload.text,
+      uploadIds: payload.uploadIds,
+      collaborators: payload.collaborators,
+      tagged: payload.tagged,
+    };
+
+    if (typeof payload.thumbnail === 'string' && payload.thumbnail.trim()) {
+      instagramData.thumbnail = payload.thumbnail.trim();
+    }
+
+    if (typeof payload.thumbnailOffset === 'number') {
+      instagramData.thumbnailOffset = payload.thumbnailOffset;
+    }
+
+    // Reels-only option, but harmless to omit for other types.
+    if (typeof payload.shareToFeed === 'boolean') {
+      instagramData.shareToFeed = payload.shareToFeed;
+    }
+
     return this.client.post.postCreate({
       requestBody: {
         teamId: payload.teamId,
@@ -82,13 +103,9 @@ export class InstagramService {
         socialAccountTypes: ['INSTAGRAM'],
         data: {
           INSTAGRAM: {
-            type: payload.type ?? env.postDefaults.type,
-            text: payload.text,
-            uploadIds: payload.uploadIds,
+            ...instagramData,
             shareToFeed:
               payload.shareToFeed ?? env.postDefaults.shareToFeed,
-            collaborators: payload.collaborators,
-            tagged: payload.tagged,
           },
         },
       },
